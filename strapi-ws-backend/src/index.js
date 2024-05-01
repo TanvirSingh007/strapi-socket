@@ -24,9 +24,13 @@ module.exports = {
     verify(token)
 
     */
-    let interval;
 
-    let messageList = []
+    const fetchEntries = async () => {
+      return await strapi.entityService.findMany('api::message.message', {
+        fields: ['text', 'type', 'timestamp'],
+        sort: { timestamp: 'ASC' },
+      });
+    }
 
     var io = require('socket.io')(strapi.server.httpServer, {
       cors: {
@@ -59,21 +63,14 @@ module.exports = {
     }).on('connection', function (socket) {
 
 
-
-
-      if (interval) {
-        clearInterval(interval);
-      }
-
       console.log('a user connected');
 
       socket.on('loadMessages', async (data) => {
 
-        let params = data;
-
         try {
-          io.emit("loadMessages", messageList);
-          console.log(messageList);
+          const entries = await fetchEntries()
+          io.emit("loadMessages", entries);
+          console.log(entries);
 
         } catch (error) {
           console.log(error);
@@ -86,16 +83,26 @@ module.exports = {
         let params = data;
 
         try {
+          // console.log(strapi);
           console.log(params);
-          messageList.push({
-            text: params.messageText,
-            type: 0
-          })
-          messageList.push({
-            text: params.messageText,
-            type: 1
-          })
-          io.emit("loadMessages", messageList);
+          await strapi.entityService.create('api::message.message',
+            {
+              data: {
+                text: params.messageText,
+                type: 0,
+                timestamp: new Date()
+              }
+            });
+          await strapi.entityService.create('api::message.message',
+            {
+              data: {
+                text: params.messageText,
+                type: 1,
+                timestamp: new Date()
+              }
+            });
+          const entries = await fetchEntries()
+          io.emit("loadMessages", entries);
 
         } catch (error) {
           console.log(error);
@@ -105,7 +112,6 @@ module.exports = {
 
       socket.on('disconnect', () => {
         console.log('user disconnected');
-        clearInterval(interval);
       });
     });
 

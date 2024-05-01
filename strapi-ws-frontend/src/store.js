@@ -55,8 +55,6 @@ const dataStore = {
 
         }, async LogOut({ commit }) {
             let user = null
-
-            
             commit('logOut', user);
         }
     }
